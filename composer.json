@@ -1,0 +1,58 @@
+{
+    "name": "prowendi/hyperf-http-waf",
+    "description": "A reusable Hyperf HTTP WAF middleware package for PHP 8.4+ with Swoole and OpenSwoole compatibility.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "hyperf",
+        "waf",
+        "middleware",
+        "security",
+        "swoole",
+        "openswoole"
+    ],
+    "homepage": "https://github.com/prowendi/hyperf-http-waf",
+    "support": {
+        "issues": "https://github.com/prowendi/hyperf-http-waf/issues",
+        "source": "https://github.com/prowendi/hyperf-http-waf"
+    },
+    "require": {
+        "php": "^8.4",
+        "ext-json": "*",
+        "hyperf/config": "^3.0",
+        "hyperf/contract": "^3.0",
+        "hyperf/http-server": "^3.0",
+        "psr/container": "^2.0",
+        "psr/http-factory": "^1.1",
+        "psr/http-message": "^2.0",
+        "psr/http-server-handler": "^1.0",
+        "psr/http-server-middleware": "^1.0",
+        "psr/log": "^3.0"
+    },
+    "suggest": {
+        "hyperf/logger": "Required for channel-based WAF log routing (logging.channel config option)"
+    },
+    "require-dev": {
+        "nyholm/psr7": "^1.8",
+        "phpunit/phpunit": "^11.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "Prowendi\\HyperfHttpWaf\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Prowendi\\HyperfHttpWaf\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit --colors=always",
+        "test:coverage": "phpunit --coverage-text"
+    },
+    "extra": {
+        "hyperf": {
+            "config": "Prowendi\\\\HyperfHttpWaf\\\\ConfigProvider"
+        }
+    }
+}
