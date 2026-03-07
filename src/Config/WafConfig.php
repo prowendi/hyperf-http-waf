@@ -8,6 +8,12 @@ use Prowendi\HyperfHttpWaf\Enum\WafMode;
 
 final readonly class WafConfig
 {
+    private const ALL_TRUSTED_IP_HEADERS = [
+        'x-forwarded-for',
+        'x-real-ip',
+        'forwarded',
+    ];
+
     /**
      * @param array<string, mixed> $config
      */
@@ -48,9 +54,38 @@ final readonly class WafConfig
         return array_values(array_map('strval', (array) $this->get('trusted_proxies', [])));
     }
 
+    public function trustsAllProxies(): bool
+    {
+        foreach ($this->trustedProxies() as $proxy) {
+            if (trim($proxy) === '*') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function trustedHeaders(): array
     {
-        return array_values(array_map(static fn ($value): string => strtolower((string) $value), (array) $this->get('trusted_headers', [])));
+        $configured = array_values(array_map(
+            static fn ($value): string => strtolower(trim((string) $value)),
+            (array) $this->get('trusted_headers', [])
+        ));
+
+        if (! in_array('*', $configured, true)) {
+            return array_values(array_filter($configured, static fn (string $value): bool => $value !== ''));
+        }
+
+        $headers = [];
+        foreach ([...self::ALL_TRUSTED_IP_HEADERS, ...$configured] as $header) {
+            if ($header === '' || $header === '*') {
+                continue;
+            }
+
+            $headers[$header] = $header;
+        }
+
+        return array_values($headers);
     }
 
     public function allowedMethods(): array
@@ -97,6 +132,17 @@ final readonly class WafConfig
     public function maxHeaderValueLength(): int
     {
         return max(256, (int) $this->get('thresholds.header_value_length', 2048));
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function excludedHeaderNames(): array
+    {
+        return array_values(array_map(
+            static fn ($value): string => strtolower(trim((string) $value)),
+            (array) $this->get('header_detection.exclude_names', [])
+        ));
     }
 
     public function whitelist(): array

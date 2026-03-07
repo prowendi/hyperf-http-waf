@@ -228,4 +228,28 @@ final class WafMiddlewareTest extends TestCase
         self::assertSame(403, $response->getStatusCode());
         self::assertSame('block', $reporter->entries[0]['result']->action->value);
     }
+
+    public function testLocalhostOriginAndHostAreNotBlockedByDefaultHeaderScanning(): void
+    {
+        $reporter = new SpyReporter();
+        $middleware = $this->createMiddleware([
+            'mode' => 'block',
+            'decision' => [
+                'score_threshold' => 45,
+            ],
+        ], $reporter);
+
+        $request = $this->createRequest('POST', 'http://127.0.0.1:9501/auth/login', [
+            'host' => '127.0.0.1:9501',
+            'origin' => 'http://localhost:5173',
+            'referer' => 'http://localhost:5173/login',
+            'content-type' => 'application/json',
+            'user-agent' => 'Mozilla/5.0',
+        ], '{"username":"alice","password":"secret"}');
+
+        $response = $middleware->process($request, new OkHandler());
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertCount(0, $reporter->entries);
+    }
 }

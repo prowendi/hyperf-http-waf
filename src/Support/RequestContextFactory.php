@@ -29,7 +29,7 @@ final class RequestContextFactory
 
         $queryPayload = $this->inputFlattener->flatten($queryParams, 'query', $config->maxNestedDepth());
         $cookiePayload = $this->inputFlattener->flatten($cookies, 'cookie', $config->maxNestedDepth());
-        $headerInputs = $this->flattenHeaders($headers);
+        $headerInputs = $this->flattenHeaders($headers, $config);
 
         $bodyInfo = $this->extractBody($request, $config);
         $files = $this->flattenUploadedFiles($request->getUploadedFiles());
@@ -94,11 +94,12 @@ final class RequestContextFactory
      * @param array<string, list<string>> $headers
      * @return list<TextInput>
      */
-    private function flattenHeaders(array $headers): array
+    private function flattenHeaders(array $headers, WafConfig $config): array
     {
         $inputs = [];
+        $excluded = $config->excludedHeaderNames();
         foreach ($headers as $name => $values) {
-            if ($name === 'cookie') {
+            if ($name === 'cookie' || $this->shouldSkipHeader($name, $excluded)) {
                 continue;
             }
 
@@ -109,6 +110,33 @@ final class RequestContextFactory
         }
 
         return $inputs;
+    }
+
+    /**
+     * @param list<string> $excluded
+     */
+    private function shouldSkipHeader(string $name, array $excluded): bool
+    {
+        $normalized = strtolower($name);
+        foreach ($excluded as $pattern) {
+            if ($pattern === '') {
+                continue;
+            }
+
+            if (str_contains($pattern, '*')) {
+                if (fnmatch($pattern, $normalized)) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            if ($normalized === $pattern) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

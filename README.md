@@ -216,8 +216,8 @@ return [
 - `enabled`: 总开关
 - `mode`: `observe` 或 `block`
 - `body_size_limit`: Body 检测读取上限，超过后只记规则不做全文扫描
-- `trusted_proxies`: 可信代理 IP / CIDR
-- `trusted_headers`: 可信代理下允许读取的真实 IP 头
+- `trusted_proxies`: 可信代理 IP / CIDR，支持 `*` 表示信任任意上游代理
+- `trusted_headers`: 可信代理下允许读取的真实 IP 头，支持 `*` 表示启用包内支持的全部真实 IP 头：`x-forwarded-for`、`x-real-ip`、`forwarded`
 - `allowed_methods`: 允许的 HTTP 方法
 
 ### 决策项

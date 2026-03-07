@@ -23,7 +23,7 @@ final class RealIpResolver
         }
 
         $trustedProxies = $config->trustedProxies();
-        if ($trustedProxies === [] || ! $this->cidrMatcher->matches($remoteAddr, $trustedProxies)) {
+        if (! $config->trustsAllProxies() && ($trustedProxies === [] || ! $this->cidrMatcher->matches($remoteAddr, $trustedProxies))) {
             return new ResolvedIp($remoteAddr, $remoteAddr, 'remote_addr');
         }
 
