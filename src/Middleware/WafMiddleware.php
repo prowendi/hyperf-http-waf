@@ -6,11 +6,22 @@ namespace Prowendi\HyperfHttpWaf\Middleware;
 
 use Prowendi\HyperfHttpWaf\Contract\DetectorInterface;
 use Prowendi\HyperfHttpWaf\Contract\ReporterInterface;
+use Prowendi\HyperfHttpWaf\Contract\RuleProviderInterface;
 use Prowendi\HyperfHttpWaf\Config\WafConfig;
 use Prowendi\HyperfHttpWaf\Decision\DecisionEngine;
+use Prowendi\HyperfHttpWaf\Detector\BodyDetector;
+use Prowendi\HyperfHttpWaf\Detector\CookieDetector;
+use Prowendi\HyperfHttpWaf\Detector\FileUploadDetector;
+use Prowendi\HyperfHttpWaf\Detector\HeaderDetector;
+use Prowendi\HyperfHttpWaf\Detector\IpDetector;
+use Prowendi\HyperfHttpWaf\Detector\MethodDetector;
+use Prowendi\HyperfHttpWaf\Detector\PathDetector;
+use Prowendi\HyperfHttpWaf\Detector\QueryDetector;
+use Prowendi\HyperfHttpWaf\Detector\UaDetector;
 use Prowendi\HyperfHttpWaf\DTO\RequestContext;
 use Prowendi\HyperfHttpWaf\Enum\DecisionAction;
 use Prowendi\HyperfHttpWaf\Enum\RuleAction;
+use Prowendi\HyperfHttpWaf\Matcher\PatternMatcher;
 use Prowendi\HyperfHttpWaf\Result\RuleHit;
 use Prowendi\HyperfHttpWaf\Support\AccessListMatcher;
 use Prowendi\HyperfHttpWaf\Support\BlockingResponseFactory;
@@ -24,17 +35,22 @@ use Psr\Http\Server\RequestHandlerInterface;
 final class WafMiddleware implements MiddlewareInterface
 {
     /**
-     * @param array<string, DetectorInterface> $detectors
+     * @var array<string, DetectorInterface>
      */
+    private readonly array $detectors;
+
     public function __construct(
         private readonly WafConfigFactory $configFactory,
         private readonly RequestContextFactory $requestContextFactory,
         private readonly AccessListMatcher $accessListMatcher,
-        private readonly array $detectors,
+        RuleProviderInterface $ruleProvider,
         private readonly DecisionEngine $decisionEngine,
         private readonly ReporterInterface $reporter,
         private readonly BlockingResponseFactory $blockingResponseFactory,
+        ?PatternMatcher $patternMatcher = null,
     ) {
+        $patternMatcher ??= new PatternMatcher();
+        $this->detectors = self::buildDetectors($patternMatcher, $ruleProvider);
     }
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
@@ -93,5 +109,23 @@ final class WafMiddleware implements MiddlewareInterface
         }
 
         return $hits;
+    }
+
+    /**
+     * @return array<string, DetectorInterface>
+     */
+    private static function buildDetectors(PatternMatcher $patternMatcher, RuleProviderInterface $ruleProvider): array
+    {
+        return [
+            'method' => new MethodDetector(),
+            'ip' => new IpDetector(),
+            'ua' => new UaDetector($patternMatcher, $ruleProvider),
+            'path' => new PathDetector($patternMatcher, $ruleProvider),
+            'query' => new QueryDetector($patternMatcher, $ruleProvider),
+            'header' => new HeaderDetector($patternMatcher, $ruleProvider),
+            'cookie' => new CookieDetector($patternMatcher, $ruleProvider),
+            'body' => new BodyDetector($patternMatcher, $ruleProvider),
+            'file_upload' => new FileUploadDetector(),
+        ];
     }
 }

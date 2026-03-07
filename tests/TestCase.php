@@ -6,16 +6,6 @@ namespace Prowendi\HyperfHttpWaf\Tests;
 
 use Prowendi\HyperfHttpWaf\Decision\DecisionEngine;
 use Prowendi\HyperfHttpWaf\Decision\RiskScorer;
-use Prowendi\HyperfHttpWaf\Detector\BodyDetector;
-use Prowendi\HyperfHttpWaf\Detector\CookieDetector;
-use Prowendi\HyperfHttpWaf\Detector\FileUploadDetector;
-use Prowendi\HyperfHttpWaf\Detector\HeaderDetector;
-use Prowendi\HyperfHttpWaf\Detector\IpDetector;
-use Prowendi\HyperfHttpWaf\Detector\MethodDetector;
-use Prowendi\HyperfHttpWaf\Detector\PathDetector;
-use Prowendi\HyperfHttpWaf\Detector\QueryDetector;
-use Prowendi\HyperfHttpWaf\Detector\UaDetector;
-use Prowendi\HyperfHttpWaf\Matcher\PatternMatcher;
 use Prowendi\HyperfHttpWaf\Middleware\WafMiddleware;
 use Prowendi\HyperfHttpWaf\Support\AccessListMatcher;
 use Prowendi\HyperfHttpWaf\Support\BlockingResponseFactory;
@@ -43,28 +33,15 @@ abstract class TestCase extends BaseTestCase
             ],
         ]);
 
-        $patternMatcher = new PatternMatcher();
         $ruleProvider = new ConfigRuleProvider();
         $psr17Factory = new Psr17Factory();
         $reporter ??= new SpyReporter();
-
-        $detectors = [
-            'method' => new MethodDetector(),
-            'ip' => new IpDetector(),
-            'ua' => new UaDetector($patternMatcher, $ruleProvider),
-            'path' => new PathDetector($patternMatcher, $ruleProvider, new WildcardMatcher()),
-            'query' => new QueryDetector($patternMatcher, $ruleProvider),
-            'header' => new HeaderDetector($patternMatcher, $ruleProvider),
-            'cookie' => new CookieDetector($patternMatcher, $ruleProvider),
-            'body' => new BodyDetector($patternMatcher, $ruleProvider),
-            'file_upload' => new FileUploadDetector(),
-        ];
 
         return new WafMiddleware(
             new WafConfigFactory($container),
             new RequestContextFactory(new RealIpResolver(new CidrMatcher()), new InputFlattener()),
             new AccessListMatcher(new CidrMatcher(), new WildcardMatcher()),
-            $detectors,
+            $ruleProvider,
             new DecisionEngine(new RiskScorer()),
             $reporter,
             new BlockingResponseFactory($psr17Factory, $psr17Factory),
