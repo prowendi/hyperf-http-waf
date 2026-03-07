@@ -10,7 +10,6 @@ use Prowendi\HyperfHttpWaf\Decision\DecisionEngine;
 use Prowendi\HyperfHttpWaf\Decision\RiskScorer;
 use Prowendi\HyperfHttpWaf\Middleware\WafMiddleware;
 use Prowendi\HyperfHttpWaf\Support\AccessListMatcher;
-use Prowendi\HyperfHttpWaf\Support\BlockingResponseFactory;
 use Prowendi\HyperfHttpWaf\Support\CidrMatcher;
 use Prowendi\HyperfHttpWaf\Support\ConfigRuleProvider;
 use Prowendi\HyperfHttpWaf\Support\InputFlattener;
@@ -20,7 +19,6 @@ use Prowendi\HyperfHttpWaf\Support\WafConfigFactory;
 use Prowendi\HyperfHttpWaf\Support\WildcardMatcher;
 use Prowendi\HyperfHttpWaf\Tests\Stubs\ArrayContainer;
 use Prowendi\HyperfHttpWaf\Tests\Stubs\SpyReporter;
-use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\ServerRequest;
 use PHPUnit\Framework\TestCase as BaseTestCase;
 use Psr\Http\Message\ServerRequestInterface;
@@ -40,14 +38,11 @@ abstract class TestCase extends BaseTestCase
             ReporterInterface::class => $reporter,
         ]);
 
-        $psr17Factory = new Psr17Factory();
-
         return new WafMiddleware(
             new WafConfigFactory($container),
             new RequestContextFactory(new RealIpResolver(new CidrMatcher()), new InputFlattener()),
             new AccessListMatcher(new CidrMatcher(), new WildcardMatcher()),
             new DecisionEngine(new RiskScorer()),
-            new BlockingResponseFactory($psr17Factory, $psr17Factory),
             $container,
         );
     }

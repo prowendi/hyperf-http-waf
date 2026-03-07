@@ -42,19 +42,20 @@ final class WafMiddleware implements MiddlewareInterface
      */
     private readonly array $detectors;
     private readonly ReporterInterface $reporter;
+    private readonly BlockingResponseFactory $blockingResponseFactory;
 
     public function __construct(
         private readonly WafConfigFactory $configFactory,
         private readonly RequestContextFactory $requestContextFactory,
         private readonly AccessListMatcher $accessListMatcher,
         private readonly DecisionEngine $decisionEngine,
-        private readonly BlockingResponseFactory $blockingResponseFactory,
         private readonly ContainerInterface $container,
         ?PatternMatcher $patternMatcher = null,
     ) {
         $patternMatcher ??= new PatternMatcher();
         $ruleProvider = $this->resolveRuleProvider();
         $this->reporter = $this->resolveReporter();
+        $this->blockingResponseFactory = $this->resolveBlockingResponseFactory();
         $this->detectors = self::buildDetectors($patternMatcher, $ruleProvider);
     }
 
@@ -170,5 +171,17 @@ final class WafMiddleware implements MiddlewareInterface
         }
 
         return new LoggerReporter($this->container);
+    }
+
+    private function resolveBlockingResponseFactory(): BlockingResponseFactory
+    {
+        if ($this->container->has(BlockingResponseFactory::class)) {
+            $factory = $this->container->get(BlockingResponseFactory::class);
+            if ($factory instanceof BlockingResponseFactory) {
+                return $factory;
+            }
+        }
+
+        return new BlockingResponseFactory();
     }
 }

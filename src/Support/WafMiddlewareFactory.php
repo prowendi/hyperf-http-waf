@@ -7,8 +7,6 @@ namespace Prowendi\HyperfHttpWaf\Support;
 use Prowendi\HyperfHttpWaf\Decision\DecisionEngine;
 use Prowendi\HyperfHttpWaf\Middleware\WafMiddleware;
 use Psr\Container\ContainerInterface;
-use Psr\Http\Message\ResponseFactoryInterface;
-use Psr\Http\Message\StreamFactoryInterface;
 
 final class WafMiddlewareFactory
 {
@@ -19,10 +17,6 @@ final class WafMiddlewareFactory
             new RequestContextFactory(),
             new AccessListMatcher(),
             new DecisionEngine(),
-            new BlockingResponseFactory(
-                $container->get(ResponseFactoryInterface::class),
-                $container->get(StreamFactoryInterface::class),
-            ),
             $container,
         );
     }
