@@ -35,6 +35,11 @@ final class PatternMatcher
                 }
 
                 foreach ($candidates as $candidate) {
+                    $candidate = $this->normalizeCandidate($candidate);
+                    if ($candidate === '') {
+                        continue;
+                    }
+
                     if (! $this->passesPrefilters($candidate, $rule->prefilters)) {
                         continue;
                     }
@@ -110,22 +115,27 @@ final class PatternMatcher
 
         $unique = [];
         foreach ($candidates as $candidate) {
-            $normalized = trim($candidate);
+            $normalized = trim((string) $candidate);
             if ($normalized === '') {
                 continue;
             }
 
-            $unique[$normalized] = true;
+            $unique[$normalized] = $normalized;
         }
 
-        return array_keys($unique);
+        return array_values($unique);
     }
 
     /**
      * @param list<string> $prefilters
      */
-    private function passesPrefilters(string $candidate, array $prefilters): bool
+    private function passesPrefilters(mixed $candidate, array $prefilters): bool
     {
+        $candidate = $this->normalizeCandidate($candidate);
+        if ($candidate === '') {
+            return false;
+        }
+
         if ($prefilters === []) {
             return true;
         }
@@ -148,5 +158,22 @@ final class PatternMatcher
         }
 
         return preg_match('/^[A-Za-z0-9+\/=]+$/', $candidate) === 1;
+    }
+
+    private function normalizeCandidate(mixed $candidate): string
+    {
+        if (is_string($candidate)) {
+            return trim($candidate);
+        }
+
+        if (is_int($candidate) || is_float($candidate) || is_bool($candidate)) {
+            return trim((string) $candidate);
+        }
+
+        if ($candidate instanceof \Stringable) {
+            return trim((string) $candidate);
+        }
+
+        return '';
     }
 }
