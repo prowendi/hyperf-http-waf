@@ -229,11 +229,18 @@ final readonly class WafConfig
         return $value;
     }
 
-    private static ?array $defaultsCache = null;
-
     private static function defaults(): array
     {
-        return self::$defaultsCache ??= require dirname(__DIR__, 2) . '/publish/waf.php';
+        static $defaults = null;
+
+        if (is_array($defaults)) {
+            return $defaults;
+        }
+
+        /** @var array<string, mixed> $loaded */
+        $loaded = require dirname(__DIR__, 2) . '/publish/waf.php';
+
+        return $defaults = $loaded;
     }
 
     private static function merge(array $defaults, array $override): array
