@@ -1,6 +1,6 @@
 {
     "name": "prowendi/hyperf-http-waf",
-    "description": "A reusable Hyperf HTTP WAF middleware package for PHP 8.4+ with Swoole and OpenSwoole compatibility.",
+    "description": "A reusable Hyperf HTTP WAF middleware package for PHP 8.2+ with Swoole and OpenSwoole compatibility.",
     "type": "library",
     "license": "MIT",
     "keywords": [
@@ -17,7 +17,7 @@
         "source": "https://github.com/prowendi/hyperf-http-waf"
     },
     "require": {
-        "php": "^8.3",
+        "php": "^8.2",
         "ext-json": "*",
         "hyperf/config": "^3.0",
         "hyperf/contract": "^3.0",

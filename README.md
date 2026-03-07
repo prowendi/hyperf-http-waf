@@ -1,6 +1,6 @@
 # prowendi/hyperf-http-waf
 
-`prowendi/hyperf-http-waf` 是一个面向 Hyperf 3.x+ 的独立 Composer WAF 扩展包，提供可复用的 HTTP 中间件、默认规则、真实 IP 解析、日志上报和可扩展规则体系，适配 PHP 8.4+ 与 Swoole / OpenSwoole 长驻内存模型。
+`prowendi/hyperf-http-waf` 是一个面向 Hyperf 3.x+ 的独立 Composer WAF 扩展包，提供可复用的 HTTP 中间件、默认规则、真实 IP 解析、日志上报和可扩展规则体系，适配 PHP 8.2+ 与 Swoole / OpenSwoole 长驻内存模型。
 
 ## 特性
 
@@ -16,7 +16,7 @@
 
 ## 环境要求
 
-- PHP 8.4+
+- PHP 8.2+
 - Hyperf 3.x+
 - Swoole 或 OpenSwoole 运行时
 
