@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Prowendi\HyperfHttpWaf\Tests;
 
+use Prowendi\HyperfHttpWaf\Contract\ReporterInterface;
+use Prowendi\HyperfHttpWaf\Contract\RuleProviderInterface;
 use Prowendi\HyperfHttpWaf\Decision\DecisionEngine;
 use Prowendi\HyperfHttpWaf\Decision\RiskScorer;
 use Prowendi\HyperfHttpWaf\Middleware\WafMiddleware;
@@ -27,24 +29,26 @@ abstract class TestCase extends BaseTestCase
 {
     protected function createMiddleware(array $configOverrides = [], ?SpyReporter $reporter = null): WafMiddleware
     {
+        $ruleProvider = new ConfigRuleProvider();
+        $reporter ??= new SpyReporter();
+
         $container = new ArrayContainer([
             'config' => [
                 'waf' => $configOverrides,
             ],
+            RuleProviderInterface::class => $ruleProvider,
+            ReporterInterface::class => $reporter,
         ]);
 
-        $ruleProvider = new ConfigRuleProvider();
         $psr17Factory = new Psr17Factory();
-        $reporter ??= new SpyReporter();
 
         return new WafMiddleware(
             new WafConfigFactory($container),
             new RequestContextFactory(new RealIpResolver(new CidrMatcher()), new InputFlattener()),
             new AccessListMatcher(new CidrMatcher(), new WildcardMatcher()),
-            $ruleProvider,
             new DecisionEngine(new RiskScorer()),
-            $reporter,
             new BlockingResponseFactory($psr17Factory, $psr17Factory),
+            $container,
         );
     }
 

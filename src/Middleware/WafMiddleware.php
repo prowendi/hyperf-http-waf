@@ -21,12 +21,15 @@ use Prowendi\HyperfHttpWaf\Detector\UaDetector;
 use Prowendi\HyperfHttpWaf\DTO\RequestContext;
 use Prowendi\HyperfHttpWaf\Enum\DecisionAction;
 use Prowendi\HyperfHttpWaf\Enum\RuleAction;
+use Prowendi\HyperfHttpWaf\Logger\LoggerReporter;
 use Prowendi\HyperfHttpWaf\Matcher\PatternMatcher;
 use Prowendi\HyperfHttpWaf\Result\RuleHit;
 use Prowendi\HyperfHttpWaf\Support\AccessListMatcher;
 use Prowendi\HyperfHttpWaf\Support\BlockingResponseFactory;
+use Prowendi\HyperfHttpWaf\Support\ConfigRuleProvider;
 use Prowendi\HyperfHttpWaf\Support\RequestContextFactory;
 use Prowendi\HyperfHttpWaf\Support\WafConfigFactory;
+use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -38,18 +41,20 @@ final class WafMiddleware implements MiddlewareInterface
      * @var array<string, DetectorInterface>
      */
     private readonly array $detectors;
+    private readonly ReporterInterface $reporter;
 
     public function __construct(
         private readonly WafConfigFactory $configFactory,
         private readonly RequestContextFactory $requestContextFactory,
         private readonly AccessListMatcher $accessListMatcher,
-        RuleProviderInterface $ruleProvider,
         private readonly DecisionEngine $decisionEngine,
-        private readonly ReporterInterface $reporter,
         private readonly BlockingResponseFactory $blockingResponseFactory,
+        private readonly ContainerInterface $container,
         ?PatternMatcher $patternMatcher = null,
     ) {
         $patternMatcher ??= new PatternMatcher();
+        $ruleProvider = $this->resolveRuleProvider();
+        $this->reporter = $this->resolveReporter();
         $this->detectors = self::buildDetectors($patternMatcher, $ruleProvider);
     }
 
@@ -127,5 +132,43 @@ final class WafMiddleware implements MiddlewareInterface
             'body' => new BodyDetector($patternMatcher, $ruleProvider),
             'file_upload' => new FileUploadDetector(),
         ];
+    }
+
+    private function resolveRuleProvider(): RuleProviderInterface
+    {
+        if ($this->container->has(RuleProviderInterface::class)) {
+            $provider = $this->container->get(RuleProviderInterface::class);
+            if ($provider instanceof RuleProviderInterface) {
+                return $provider;
+            }
+        }
+
+        if ($this->container->has(ConfigRuleProvider::class)) {
+            $provider = $this->container->get(ConfigRuleProvider::class);
+            if ($provider instanceof RuleProviderInterface) {
+                return $provider;
+            }
+        }
+
+        return new ConfigRuleProvider();
+    }
+
+    private function resolveReporter(): ReporterInterface
+    {
+        if ($this->container->has(ReporterInterface::class)) {
+            $reporter = $this->container->get(ReporterInterface::class);
+            if ($reporter instanceof ReporterInterface) {
+                return $reporter;
+            }
+        }
+
+        if ($this->container->has(LoggerReporter::class)) {
+            $reporter = $this->container->get(LoggerReporter::class);
+            if ($reporter instanceof ReporterInterface) {
+                return $reporter;
+            }
+        }
+
+        return new LoggerReporter($this->container);
     }
 }
