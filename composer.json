@@ -17,7 +17,7 @@
         "source": "https://github.com/prowendi/hyperf-http-waf"
     },
     "require": {
-        "php": "^8.4",
+        "php": "^8.3",
         "ext-json": "*",
         "hyperf/config": "^3.0",
         "hyperf/contract": "^3.0",
