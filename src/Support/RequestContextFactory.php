@@ -32,7 +32,7 @@ final class RequestContextFactory
         $headerInputs = $this->flattenHeaders($headers, $config);
 
         $bodyInfo = $this->extractBody($request, $config);
-        $files = $this->flattenUploadedFiles($request->getUploadedFiles());
+        $files = $this->flattenUploadedFiles($request->getUploadedFiles(), $config->contentInspection());
 
         return new RequestContext(
             clientIp: $resolvedIp->clientIp,
@@ -215,6 +215,19 @@ final class RequestContextFactory
                     $bodyMaxValueLength = strlen($rawBody);
                 }
             }
+
+            // Fallback: a body that the framework did not parse (missing or
+            // non-standard content type) is still attacker-controlled input
+            // and must be scanned as raw data.
+            if ($bodyInputs === []
+                && (is_string($rawBody) && $rawBody !== '')
+                && ! ($contentTypeHeader === 'multipart/form-data' && $request->getUploadedFiles() !== [])
+            ) {
+                $bodyInputs = [new TextInput('body', 'raw', $rawBody)];
+                $bodyParameterCount = 1;
+                $bodyMaxDepth = 1;
+                $bodyMaxValueLength = strlen($rawBody);
+            }
         }
 
         return [
@@ -260,6 +273,16 @@ final class RequestContextFactory
             $preview = $stream->read($limit + 1);
             $stream->seek($position);
         } catch (Throwable) {
+            // Best effort to leave the stream where it was found so the
+            // business handler does not read misaligned body data.
+            try {
+                if (isset($position) && $stream->isSeekable()) {
+                    $stream->seek($position);
+                }
+            } catch (Throwable) {
+                // intentionally ignored
+            }
+
             return [
                 'preview' => null,
                 'size' => $size,
@@ -287,11 +310,11 @@ final class RequestContextFactory
      * @param array<string, UploadedFileInterface|array<array-key, UploadedFileInterface|mixed>> $files
      * @return list<UploadedFileMetadata>
      */
-    private function flattenUploadedFiles(array $files): array
+    private function flattenUploadedFiles(array $files, bool $readContent): array
     {
         $metadata = [];
         foreach ($files as $field => $file) {
-            $this->walkUploadedFiles((string) $field, $file, $metadata);
+            $this->walkUploadedFiles((string) $field, $file, $metadata, $readContent);
         }
 
         return $metadata;
@@ -300,10 +323,10 @@ final class RequestContextFactory
     /**
      * @param array<int, UploadedFileMetadata> $metadata
      */
-    private function walkUploadedFiles(string $field, mixed $file, array &$metadata): void
+    private function walkUploadedFiles(string $field, mixed $file, array &$metadata, bool $readContent): void
     {
         if ($file instanceof UploadedFileInterface) {
-            $metadata[] = UploadedFileMetadata::fromUploadedFile($field, $file);
+            $metadata[] = UploadedFileMetadata::fromUploadedFile($field, $file, $readContent);
             return;
         }
 
@@ -312,7 +335,7 @@ final class RequestContextFactory
         }
 
         foreach ($file as $key => $nested) {
-            $this->walkUploadedFiles($field . '[' . $key . ']', $nested, $metadata);
+            $this->walkUploadedFiles($field . '[' . $key . ']', $nested, $metadata, $readContent);
         }
     }
 

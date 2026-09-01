@@ -75,6 +75,14 @@ final class InputFlattener
         }
 
         $this->appendInput($location, $path === '' ? $location : $path, $this->stringify($payload), $inputs, $count, $maxValueLength);
+
+        // Parameter names are attacker-controlled too (e.g. "user[$ne]"
+        // NoSQL operator injection) and must go through rule scanning.
+        // Appended after the value so samples keep pointing at values;
+        // counters stay untouched because names are not new parameters.
+        if ($path !== '') {
+            $inputs[] = new TextInput($location, $path, $path);
+        }
     }
 
     /**

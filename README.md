@@ -8,11 +8,32 @@
 - 通过 `ConfigProvider` + 默认配置接入，不绑定业务项目
 - 支持全局中间件或路由级中间件注册
 - 检测 Client IP / Method / Path / Query / Header / Cookie / Body / Upload / UA / Referer
-- 支持 SQLi、XSS、命令执行、路径穿越、LFI、SSRF、恶意扫描器 UA、非法方法、输入规模异常
+- 支持 SQLi（含字符串恒真、注释、时间盲注、堆叠、Oracle 拼接、布尔恒真变体 TRUE/LIKE/`<>`、HAVING/ORDER BY 探测、报错注入 EXTRACTVALUE/UPDATEXML、布尔盲注函数链、INTO OUTFILE/LOAD_FILE、系统 schema 访问、`/*!50000union*/` 版本注释混淆、ORM 运算符注入 `op={"id":"GT"}`）、XSS（含任意事件处理器、javascript:/data: 协议变体）、命令执行（含 Windows 命令 mshta/bitsadmin/netsh）、反弹 shell（/dev/tcp、nc -e、socat）、PHP 代码执行串（eval/assert/preg_replace /e 等）、路径穿越（含 `..;/`）、LFI（含 `php://` 流封装）、SSRF（含十六进制/十进制/八进制/IPv6 回环、AWS/GCP/阿里/腾讯/华为 metadata 及 IPv6 变体、gopher/dict 等危险协议）、反序列化（PHP 格式 + Java `rO0AB`/FastJSON `"@type"` Java 类名）、原型链污染（`__proto__`/`constructor.constructor`）、ThinkPHP filter 覆写与 invokefunction、Struts2 OGNL、NoSQL 运算符注入、XXE、JNDI（Log4Shell）、CRLF 头注入、SSTI（Jinja/FreeMarker）、JWT alg:none、null 字节参数、凭据泄露（AWS/阿里 LTAI/腾讯 AKID/Stripe/GitHub/Slack/私钥）、已知框架漏洞路径（think\app、BshServlet、druid、wls-wsat、xmlrpc.php 等）、恶意扫描器 UA、非法方法、输入规模异常
+- Header 专项：Host 值含路径片段（Host 头注入绕过）、下划线转发头（`X_Forwarded_For` 伪造）
+- 上传文件内容嗅探：识别伪装扩展名的 Webshell（`<?php`/JSP 声明）、脚本 shebang、SVG 内嵌脚本、Zip Slip 归档穿越条目（可通过 `files.content_inspection` 关闭）
+- 参数名与参数值同时扫描（覆盖 `user[$ne]=` 类 NoSQL 注入、`__proto__` 键注入）
+- 请求体无 Content-Type 或非文本类型时仍按原始数据扫描
+- 超长值同时扫描头部与尾部切片，防止"填充绕过"
+- 白名单路径匹配同时校验原始/解码/归一化路径，防止编码前前缀绕过
+- 可选 LLM 提示词注入检测组（`llm-*` 规则，默认关闭）：指令覆盖（"ignore previous instructions"）、系统提示词探测、伪造审批标记 —— 面向 AI 网关/Agent 场景按需开启
 - 提供 `observe` 与 `block` 两种模式
 - 支持白名单、黑名单、可信代理、可信转发头
 - 默认日志支持 PSR Logger，未接入时回退 `error_log`
 - 请求态数据不进入全局可变静态状态，适合协程与长驻内存
+
+### 已知限制
+
+- 超出 `max_scan_length` 的值仅覆盖头部 + 尾部各一个窗口，攻击载荷藏在超长值中部且总分低于阈值时可能漏报
+- UTF-7 等已过时浏览器编码不做归一化
+- `observe` 模式只记录不拦截
+- 频率类攻击(爆破、验证码滥用、限流键轮换)需要跨请求状态，请在外层限流器处理
+
+### 升级注意
+
+- **从旧版本升级时请重新发布 `waf.php`**:`rules` 是数组,配置合并规则下用户已发布的 `rules` 会整体覆盖默认规则——不重新发布就拿不到新增规则(仅引擎层修复生效)
+- `trusted_proxies => ['*']` / `0.0.0.0/0` 会同时信任 IPv4 与 IPv6 来源
+- 白名单路径匹配会同时校验原始/解码/归一化三种路径变体——URL 编码了斜杠的正常客户端(如 `/api%2Fv1/x`)可能不再命中 `/api/*` 白名单，如有此类流量请把编码形式一并加入白名单
+- 关闭 `files.content_inspection` 后,非 seekable 上传流不会做内容嗅探(避免破坏性读取)
 
 ## 环境要求
 

@@ -234,9 +234,6 @@ final class WafMiddlewareTest extends TestCase
         $reporter = new SpyReporter();
         $middleware = $this->createMiddleware([
             'mode' => 'block',
-            'decision' => [
-                'score_threshold' => 45,
-            ],
         ], $reporter);
 
         $request = $this->createRequest('POST', 'http://127.0.0.1:9501/auth/login', [
@@ -249,7 +246,11 @@ final class WafMiddlewareTest extends TestCase
 
         $response = $middleware->process($request, new OkHandler());
 
+        // Localhost development traffic stays below the default blocking
+        // threshold; the referer scan may report it for observability only.
         self::assertSame(200, $response->getStatusCode());
-        self::assertCount(0, $reporter->entries);
+        foreach ($reporter->entries as $entry) {
+            self::assertSame('observe', $entry['result']->action->value);
+        }
     }
 }

@@ -10,20 +10,27 @@ use Prowendi\HyperfHttpWaf\DTO\Rule;
 
 final class ConfigRuleProvider implements RuleProviderInterface
 {
-    /** @var array<string, list<Rule>> */
+    /**
+     * Provider instances are usually container singles while WafConfig is
+     * rebuilt per request, so every cache entry is keyed by the rule source
+     * content — a config-center hot reload must never serve stale rules.
+     *
+     * @var array<string, list<Rule>>
+     */
     private array $cache = [];
 
-    /** @var list<Rule>|null */
-    private ?array $allRules = null;
+    /** @var array<string, list<Rule>> */
+    private array $allRules = [];
 
     public function provide(WafConfig $config, array $targets = []): array
     {
-        $key = $targets === [] ? '*' : implode('|', $targets);
+        $sourceKey = md5(serialize($config->rules()));
+        $key = ($targets === [] ? '*' : implode('|', $targets)) . '@' . $sourceKey;
         if (isset($this->cache[$key])) {
             return $this->cache[$key];
         }
 
-        $allRules = $this->resolveAllRules($config);
+        $allRules = $this->resolveAllRules($config, $sourceKey);
         if ($targets === []) {
             return $this->cache[$key] = $allRules;
         }
@@ -41,16 +48,16 @@ final class ConfigRuleProvider implements RuleProviderInterface
     public function reset(): void
     {
         $this->cache = [];
-        $this->allRules = null;
+        $this->allRules = [];
     }
 
     /**
      * @return list<Rule>
      */
-    private function resolveAllRules(WafConfig $config): array
+    private function resolveAllRules(WafConfig $config, string $sourceKey): array
     {
-        if ($this->allRules !== null) {
-            return $this->allRules;
+        if (isset($this->allRules[$sourceKey])) {
+            return $this->allRules[$sourceKey];
         }
 
         $rules = [];
@@ -62,6 +69,6 @@ final class ConfigRuleProvider implements RuleProviderInterface
             $rules[] = $candidate;
         }
 
-        return $this->allRules = $rules;
+        return $this->allRules[$sourceKey] = $rules;
     }
 }

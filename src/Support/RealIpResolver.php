@@ -74,7 +74,10 @@ final class RealIpResolver
 
         $chain[] = $remoteAddr;
 
-        while ($chain !== [] && $this->cidrMatcher->matches(end($chain), $trustedProxies)) {
+        // Strip trusted proxies from the right, but always keep the leftmost
+        // (client-supplied) entry so a wildcard trust list cannot empty the
+        // chain and silently fall back to the proxy address.
+        while (count($chain) > 1 && $this->cidrMatcher->matches((string) end($chain), $trustedProxies)) {
             array_pop($chain);
         }
 
@@ -108,7 +111,7 @@ final class RealIpResolver
 
         $chain[] = $remoteAddr;
 
-        while ($chain !== [] && $this->cidrMatcher->matches(end($chain), $trustedProxies)) {
+        while (count($chain) > 1 && $this->cidrMatcher->matches((string) end($chain), $trustedProxies)) {
             array_pop($chain);
         }
 

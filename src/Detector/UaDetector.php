@@ -46,7 +46,7 @@ final class UaDetector implements DetectorInterface
         }
 
         $inputs = [new TextInput('ua', 'user-agent', $context->userAgent)];
-        $rules = $this->ruleProvider->provide($config, ['ua']);
+        $rules = $this->ruleProvider->provide($config, ['ua', 'input']);
 
         return array_merge($hits, $this->patternMatcher->match($inputs, $rules, $config));
     }

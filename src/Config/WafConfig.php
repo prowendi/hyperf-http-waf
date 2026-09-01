@@ -95,7 +95,7 @@ final readonly class WafConfig
 
     public function bodySizeLimit(): int
     {
-        return max(1024, (int) $this->get('body_size_limit', 262144));
+        return max(1, (int) $this->get('body_size_limit', 262144));
     }
 
     public function scoreThreshold(): int
@@ -188,6 +188,11 @@ final readonly class WafConfig
     public function maxTotalFileSize(): int
     {
         return max(1024, (int) $this->get('files.max_total_size', 10485760));
+    }
+
+    public function contentInspection(): bool
+    {
+        return (bool) $this->get('files.content_inspection', true);
     }
 
     public function urlDecodePasses(): int

@@ -25,6 +25,10 @@ final class CidrMatcher
             return false;
         }
 
+        if ($cidr === '*' || $cidr === '0.0.0.0/0' || $cidr === '::/0') {
+            return true;
+        }
+
         if (! str_contains($cidr, '/')) {
             return $ip === $cidr;
         }
@@ -37,6 +41,13 @@ final class CidrMatcher
         }
 
         $maxBits = strlen($ipBinary) * 8;
+        // A malformed mask ("10.0.0.0/abc", "10.0.0.0/") would cast to 0 and
+        // silently match every address; reject it instead of failing open.
+        $mask = trim($mask);
+        if (! ctype_digit($mask) || $mask === '') {
+            return false;
+        }
+
         $maskBits = (int) $mask;
         if ($maskBits < 0 || $maskBits > $maxBits) {
             return false;

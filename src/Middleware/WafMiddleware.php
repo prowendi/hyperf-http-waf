@@ -21,6 +21,7 @@ use Prowendi\HyperfHttpWaf\Detector\UaDetector;
 use Prowendi\HyperfHttpWaf\DTO\RequestContext;
 use Prowendi\HyperfHttpWaf\Enum\DecisionAction;
 use Prowendi\HyperfHttpWaf\Enum\RuleAction;
+use Prowendi\HyperfHttpWaf\Enum\WafMode;
 use Prowendi\HyperfHttpWaf\Logger\LoggerReporter;
 use Prowendi\HyperfHttpWaf\Matcher\PatternMatcher;
 use Prowendi\HyperfHttpWaf\Result\RuleHit;
@@ -108,9 +109,24 @@ final class WafMiddleware implements MiddlewareInterface
     {
         $hits = [];
 
+        // In enforcing mode with block-on-first-match, the decision is
+        // already fixed once a blocking hit exists, so skip the remaining
+        // detectors. Observe mode always collects everything for reporting.
+        $shortCircuit = $config->mode() === WafMode::Block && $config->blockOnFirstMatch();
+
         foreach ($this->detectors as $name => $detector) {
-            if ($config->detectorEnabled($name)) {
-                array_push($hits, ...$detector->detect($context, $config));
+            if (! $config->detectorEnabled($name)) {
+                continue;
+            }
+
+            array_push($hits, ...$detector->detect($context, $config));
+
+            if ($shortCircuit) {
+                foreach ($hits as $hit) {
+                    if ($hit->action === RuleAction::Block) {
+                        return $hits;
+                    }
+                }
             }
         }
 

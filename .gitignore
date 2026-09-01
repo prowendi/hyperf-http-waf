@@ -19,3 +19,7 @@
 /.cache/
 /.DS_Store
 /Thumbs.db
+
+# local dev tooling
+composer.phar
+php.ini.dev

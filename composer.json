@@ -34,6 +34,7 @@
     },
     "require-dev": {
         "nyholm/psr7": "^1.8",
+        "hyperf/di": "^3.0",
         "phpunit/phpunit": "^11.5"
     },
     "autoload": {
